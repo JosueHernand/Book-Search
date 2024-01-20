@@ -4,9 +4,9 @@ const { signToken } = require('../utils/auth');
 const resolvers = {
   
   Query: {
-    me: async (_root, { user = null, params }) => {
+    me: async (_root, { user = null }, context) => {
       const foundUser = await User.findOne({
-        $or: [{ _id: user ? user._id : params.id }, { username: params.username }],
+        _id: context.user._id
       });
 
       if (!foundUser) {
@@ -30,12 +30,12 @@ const resolvers = {
     },
 
     login: async (_root, {email, password}) => {
-      const user = await User.findOne({ $or: [{ username }, { email }] });
+      const user = await User.findOne({ email });
       if(!user) {
         throw new Error("Can't find this user");
       }
 
-      const correctPw = await user.isCorrectPassword({password});
+      const correctPw = await user.isCorrectPassword(password);
       if (!correctPw){
         throw new Error('Wrong password!');
       }
@@ -44,7 +44,7 @@ const resolvers = {
       return { token, user };
     },
 
-    saveBook: async (_root, { user, authors, description, title, bookId, image, link }) => {
+    saveBook: async (_root, { authors, description, title, bookId, image, link },{ user }) => {
       try{
         const updatedUser = await User.findOneAndUpdate(
           { _id: user._id },
@@ -58,7 +58,7 @@ const resolvers = {
       }
     },
 
-    removeBook: async (_root, { user, bookId }) => {
+    removeBook: async (_root, { bookId }, { user }) => {
       const updatedUser = await User.findOneAndUpdate(
         {_id: user._id},
         { $pull: { savedBooks: { bookId } } },
